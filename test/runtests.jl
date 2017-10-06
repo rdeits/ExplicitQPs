@@ -33,7 +33,7 @@ end
         for i in 1:N
             u = @variable(m, lowerbound=-1, upperbound=1)
             xi = @variable(m, [1:2])
-            @constraint(m, xi[2] == X[end][2] + Δt * u)
+            @constraint(m, xi[2] == X[end][2] + Δt * u - 0.1)
             @constraint(m, xi[1] == X[end][1] + Δt * xi[2])
             push!(U, u)
             push!(X, xi)
