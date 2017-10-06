@@ -1,4 +1,4 @@
-using ExplicitQP
+using ExplicitQPs
 using Base.Test
 using JuMP
 using Gurobi
@@ -13,12 +13,12 @@ using Gurobi
     solve(m)
     @test getvalue(y) ≈ 0.5
     @test getvalue(x) ≈ 0.5
-    ex = ExplicitQP.explicit_solution(m, [x])
-    s = ExplicitQP.solution(ex, y)
+    ex = ExplicitQPs.explicit_solution(m, [x])
+    s = ExplicitQPs.solution(ex, y)
     @test getvalue(s) ≈ 0.5
-    @test ExplicitQP.parameter(ex, x) == getvalue(x)
-    @test ExplicitQP.gradient(ex, y) ≈ [1.0]
-    @test ExplicitQP.jacobian(ex, [y]) ≈ [1.0]
+    @test ExplicitQPs.parameter(ex, x) == getvalue(x)
+    @test ExplicitQPs.gradient(ex, y) ≈ [1.0]
+    @test ExplicitQPs.jacobian(ex, [y]) ≈ [1.0]
 end
 
 @testset "simple mpc" begin
@@ -50,9 +50,9 @@ end
     for i in 1:100
         x0 = 0.1 .* randn(2)
         m, X, U = run_mpc(x0);
-        ex = ExplicitQP.explicit_solution(m, X[1]);
-        s = ExplicitQP.solution(ex, U[1])
-        J = ExplicitQP.jacobian(ex, [U[1]])
+        ex = ExplicitQPs.explicit_solution(m, X[1]);
+        s = ExplicitQPs.solution(ex, U[1])
+        J = ExplicitQPs.jacobian(ex, [U[1]])
 
         if isapprox(getvalue(s), getvalue(U[1]), atol=1e-3, rtol=1e-3)
             correct += 1

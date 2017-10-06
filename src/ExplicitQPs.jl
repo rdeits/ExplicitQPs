@@ -1,6 +1,6 @@
 __precompile__()
 
-module ExplicitQP
+module ExplicitQPs
 
 using JuMP
 using JuMP: GenericAffExpr, AffExpr
@@ -140,6 +140,8 @@ function explicit_solution(m::Model, params::AbstractArray{Variable}, eps=1e-3)
 
     solution = [AffExpr(params, jacobian[i, :], constant[i]) for i in 1:length(constant)]
     # solution = [DualNumber(value[i], jacobian[i, :]) for i in 1:length(value)]
+    @assert isapprox(JuMP.getvalue.(solution), Hi * G̃' * (G̃ * Hi * G̃')^-1 * (W̃ + (S̃ + G̃ * Hi * F) * x) - Hi * F * x)
+
     ExplicitSolution(m, solution, constant, jacobian, x, variable_map(m, params))
 
     # ExplicitSolution(T * W̃, T * (S̃ + G̃ * Hi * F) - Hi * F, x)
