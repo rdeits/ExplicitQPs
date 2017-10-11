@@ -126,30 +126,30 @@ function explicit_solution(m::Model, params::AbstractArray{Variable}, eps=1e-3)
     
     Q = sparse(getcol.(m.obj.qvars1), getcol.(m.obj.qvars2), m.obj.qcoeffs, nvars, nvars)
     Q = 0.5 .* (Q .+ Q')
-    H = Q[.!isparam, .!isparam]
-    Hi = full(H)^-1
+    H = lufact(full(Q[.!isparam, .!isparam]))
+
     F = Q[.!isparam, isparam]
     Y = Q[isparam, isparam]
     
     v_test = rand(nvars)
     x_test = v_test[isparam]
     z_test = v_test[.!isparam]
-    @assert 0.5 * v_test' * Q * v_test ≈ (0.5 * z_test' * H * z_test + x_test' * F' * z_test + 0.5 * x_test' * Y * x_test)
+    # @assert 0.5 * v_test' * Q * v_test ≈ (0.5 * z_test' * H * z_test + x_test' * F' * z_test + 0.5 * x_test' * Y * x_test)
 
     x = getvalue(params)    
-    λ_active = -(G̃ * Hi * G̃') * (W̃ + (S̃ + G̃ * Hi * F) * x)
-    T = Hi * G̃' * (G̃ * Hi * G̃')^-1
+    HiG = H \ full(G̃')
+    HiF = H \ full(F)
+    λ_active = -(G̃ * HiG) * (W̃ + (S̃ + G̃ * HiF) * x)
 
-    jacobian = T * (S̃ + G̃ * Hi * F) - Hi * F
-    constant = T * W̃
+    GHiG = lufact(G̃ * HiG)
+
+    jacobian = HiG * (GHiG \ (S̃ + G̃ * HiF)) - HiF
+    constant = HiG * (GHiG \ full(W̃))
 
     solution = [AffExpr(params, jacobian[i, :], constant[i]) for i in 1:length(constant)]
-    # solution = [DualNumber(value[i], jacobian[i, :]) for i in 1:length(value)]
-    @assert isapprox(JuMP.getvalue.(solution), Hi * G̃' * (G̃ * Hi * G̃')^-1 * (W̃ + (S̃ + G̃ * Hi * F) * x) - Hi * F * x)
+    @assert isapprox(JuMP.getvalue.(solution), constant + jacobian * x)
 
     ExplicitSolution(m, solution, constant, jacobian, x, variable_map(m, params))
-
-    # ExplicitSolution(T * W̃, T * (S̃ + G̃ * Hi * F) - Hi * F, x)
 end
 
 end
