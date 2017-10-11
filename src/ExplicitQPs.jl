@@ -64,11 +64,11 @@ function variable_map(m::Model, params::AbstractArray{Variable})
     var_map
 end
 
-function active_inequalities(m::Model, params::AbstractArray{Variable}, eps=1e-3)
+function active_inequalities(m::Model, params::AbstractArray{Variable}, eps=1e-6)
     nvars = length(m.colCat)
     A_active = SparseVector{Float64, Int64}[]
     b_active = Float64[]
-    
+
     for i in 1:nvars
         var = Variable(m, i)
         if var in params
@@ -102,8 +102,13 @@ function active_inequalities(m::Model, params::AbstractArray{Variable}, eps=1e-3
             push!(b_active, bi)
         end
     end
-    A = hcat(A_active...)'
-    b = vcat(b_active...)
+
+    A::SparseMatrixCSC{Float64,Int} = if isempty(A_active)
+        sparse(zeros(0, nvars))
+    else
+        hcat(A_active...)'
+    end
+    b::Vector{Float64} = vcat(b_active...)
     A, b
 end
 
@@ -115,6 +120,7 @@ function explicit_solution(m::Model, params::AbstractArray{Variable}, eps=1e-3)
     
     param_cols = Set([v.col for v in params])
     isparam = collect(1:nvars) .∈ param_cols
+
     G̃ = Ã[:, .!isparam]
     S̃ = .-Ã[:, isparam]
     
@@ -131,7 +137,6 @@ function explicit_solution(m::Model, params::AbstractArray{Variable}, eps=1e-3)
     @assert 0.5 * v_test' * Q * v_test ≈ (0.5 * z_test' * H * z_test + x_test' * F' * z_test + 0.5 * x_test' * Y * x_test)
 
     x = getvalue(params)    
-    # @show size(G̃) size(Hi) size(W̃) size(S̃) size(F) x
     λ_active = -(G̃ * Hi * G̃') * (W̃ + (S̃ + G̃ * Hi * F) * x)
     T = Hi * G̃' * (G̃ * Hi * G̃')^-1
 
