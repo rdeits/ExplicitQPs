@@ -72,5 +72,5 @@ end
             end
         end
     end
-    @test (correct / (correct + incorrect)) >= 0.9
+    @test (correct / (correct + incorrect)) >= 0.95
 end
