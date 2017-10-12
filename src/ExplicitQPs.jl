@@ -126,7 +126,7 @@ function explicit_solution(m::Model, params::AbstractArray{Variable}, eps=1e-3)
     
     Q = sparse(getcol.(m.obj.qvars1), getcol.(m.obj.qvars2), m.obj.qcoeffs, nvars, nvars)
     Q = 0.5 .* (Q .+ Q')
-    H = lufact(full(Q[.!isparam, .!isparam]))
+    H = lufact(Q[.!isparam, .!isparam])
 
     F = Q[.!isparam, isparam]
     Y = Q[isparam, isparam]
