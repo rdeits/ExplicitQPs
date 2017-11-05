@@ -3,6 +3,7 @@ using Base.Test
 using JuMP
 using Gurobi
 
+
 @testset "trivial model" begin
     m = Model(solver=GurobiSolver(OutputFlag=0))
     @variable m x >= 0.5
@@ -21,9 +22,48 @@ using Gurobi
     @test ExplicitQPs.jacobian(ex, [y]) ≈ [1.0]
 end
 
-@testset "simple mpc" begin
-    function run_mpc(x0)
+@testset "models with affine cost" begin
+    @testset "model 1" begin
         m = Model(solver=GurobiSolver(OutputFlag=0))
+        @variable m x
+        @variable m y
+        @constraint m y <= x
+        JuMP.fix(x, 0.5)
+        @objective m Min (y - 0.6)^2
+        solve(m)
+        @test getvalue(y) ≈ 0.5
+        @test getvalue(x) ≈ 0.5
+        ex = ExplicitQPs.explicit_solution(m, [x])
+        s = ExplicitQPs.solution(ex, y)
+        @test getvalue(s) ≈ 0.5
+        @test ExplicitQPs.parameter(ex, x) == getvalue(x)
+        @test ExplicitQPs.gradient(ex, y) ≈ [1.0]
+        @test ExplicitQPs.jacobian(ex, [y]) ≈ [1.0]
+    end
+
+    @testset "model 2" begin
+        m = Model(solver=GurobiSolver(OutputFlag=0))
+        @variable m x
+        @variable m y
+        @constraint m y <= 10
+        JuMP.fix(x, 0.5)
+        @objective m Min (y - 0.6)^2
+        solve(m)
+        @test getvalue(y) ≈ 0.6
+        @test getvalue(x) ≈ 0.5
+        ex = ExplicitQPs.explicit_solution(m, [x])
+        s = ExplicitQPs.solution(ex, y)
+        @test getvalue(s) ≈ 0.6
+        @test ExplicitQPs.parameter(ex, x) == getvalue(x)
+        @test ExplicitQPs.gradient(ex, y) ≈ [0.0]
+        @test ExplicitQPs.jacobian(ex, [y]) ≈ [0.0]
+    end
+end
+
+@testset "simple mpc" begin
+    env = Gurobi.Env()
+    function run_mpc(x0)
+        m = Model(solver=GurobiSolver(env, OutputFlag=0))
         @variable(m, x[1:2])
         JuMP.fix.(x, x0)
         U = []
@@ -39,7 +79,7 @@ end
             push!(X, xi)
         end
 
-        @objective m Min sum([x[1]^2 + 0.01 * x[2]^2 for x in X]) + 0.01 * sum([u^2 for u in U])
+        @objective m Min sum([x[1]^2 + 0.01 * x[2]^2 for x in X]) + 0.01 * sum([(u - 0.5)^2 for u in U])
         solve(m)
         m, X, U
     end
@@ -72,5 +112,5 @@ end
             end
         end
     end
-    @test (correct / (correct + incorrect)) >= 0.95
+    @test (correct / (correct + incorrect)) >= 0.85
 end
